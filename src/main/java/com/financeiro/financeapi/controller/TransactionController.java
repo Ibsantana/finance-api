@@ -36,4 +36,11 @@ public class TransactionController {
         Page<TransactionResponseDTO> transactions = transactionService.findAllByUserId(user.getId(), pageable);
         return ResponseEntity.ok(transactions);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
+        transactionService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
 }

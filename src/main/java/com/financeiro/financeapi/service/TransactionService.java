@@ -57,4 +57,12 @@ public class TransactionService {
                 t.getCategory().getName()
         );
     }
+
+    public void deleteById(Long id) {
+        if (!transactionRepository.existsById(id)) {
+            throw new RuntimeException("Transação não encontrada com o ID: " + id);
+        }
+        transactionRepository.deleteById(id);
+    }
+
 }

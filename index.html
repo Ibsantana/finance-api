@@ -7,7 +7,7 @@
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
         body { background-color: #f4f7f6; padding: 20px; color: #333; }
-        .container { max-width: 800px; margin: 0 auto; }
+        .container { max-width: 850px; margin: 0 auto; }
         .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         h2 { margin-bottom: 15px; color: #2c3e50; }
         .form-group { margin-bottom: 15px; }
@@ -15,9 +15,11 @@
         input, select, button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         button { background-color: #27ae60; color: white; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; }
         button:hover { background-color: #219150; }
+        .btn-danger { background-color: #e74c3c; width: auto; padding: 6px 12px; font-size: 12px; border-radius: 4px; }
+        .btn-danger:hover { background-color: #c0392b; }
         .hidden { display: none; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; }
         th { background-color: #f2f2f2; }
         .badge-despesa { color: #e74c3c; font-weight: bold; }
         .badge-receita { color: #27ae60; font-weight: bold; }
@@ -82,6 +84,7 @@
                     <th>Valor</th>
                     <th>Tipo</th>
                     <th>Categoria</th>
+                    <th style="text-align: center;">Ações</th>
                 </tr>
                 </thead>
                 <tbody id="transactionTable"></tbody>
@@ -158,6 +161,9 @@
                         <td>R$ ${t.amount ? t.amount.toFixed(2) : '0.00'}</td>
                         <td class="${badge}">${t.type}</td>
                         <td>${catName}</td>
+                        <td style="text-align: center;">
+                            <button class="btn-danger" onclick="deleteTransaction(${t.id})">Excluir</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -206,6 +212,29 @@
             }
         } catch (err) {
             console.error("Erro ao criar transação:", err);
+        }
+    }
+
+    async function deleteTransaction(id) {
+        if (!confirm(`Tem certeza que deseja excluir a transação #${id}?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/transactions/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                loadTransactions();
+            } else {
+                alert("Erro ao excluir transação. Verifique se o endpoint DELETE está ativo na API.");
+            }
+        } catch (err) {
+            console.error("Erro ao deletar transação:", err);
         }
     }
 </script>
