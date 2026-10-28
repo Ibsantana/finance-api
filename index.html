@@ -67,7 +67,7 @@
             </div>
             <div class="form-group">
                 <label>ID da Categoria</label>
-                <input type="number" id="categoryId" value="1">
+                <input type="number" id="categoryId" value="2">
             </div>
             <button onclick="createTransaction()">Adicionar Transação</button>
         </div>
@@ -94,7 +94,9 @@
     const API_URL = "http://localhost:8080/api";
     let token = localStorage.getItem("jwt_token");
 
-    if (token) showDashboard();
+    document.addEventListener("DOMContentLoaded", () => {
+        if (token) showDashboard();
+    });
 
     async function login() {
         const email = document.getElementById("loginEmail").value;
@@ -134,35 +136,53 @@
             const response = await fetch(`${API_URL}/transactions`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
-            const transactions = await response.json();
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.error("Erro ao carregar transações:", data);
+                return;
+            }
+
+            const transactions = Array.isArray(data) ? data : (data.content || []);
 
             const tbody = document.getElementById("transactionTable");
             tbody.innerHTML = "";
 
             transactions.forEach(t => {
                 const badge = t.type === 'DESPESA' ? 'badge-despesa' : 'badge-receita';
+                const catName = t.categoryName || (t.category ? t.category.name : '-');
                 tbody.innerHTML += `
                     <tr>
                         <td>${t.id}</td>
                         <td>${t.description}</td>
-                        <td>R$ ${t.amount.toFixed(2)}</td>
+                        <td>R$ ${t.amount ? t.amount.toFixed(2) : '0.00'}</td>
                         <td class="${badge}">${t.type}</td>
-                        <td>${t.categoryName || '-'}</td>
+                        <td>${catName}</td>
                     </tr>
                 `;
             });
         } catch (err) {
-            console.error("Erro ao carregar transações:", err);
+            console.error("Erro na leitura das transações:", err);
         }
     }
 
     async function createTransaction() {
+        const desc = document.getElementById("desc").value;
+        const amountVal = parseFloat(document.getElementById("amount").value);
+        const catId = parseInt(document.getElementById("categoryId").value);
+
+        if (!desc || isNaN(amountVal) || isNaN(catId)) {
+            alert("Por favor, preencha a descrição, o valor e o ID da categoria.");
+            return;
+        }
+
         const payload = {
-            description: document.getElementById("desc").value,
-            amount: parseFloat(document.getElementById("amount").value),
+            description: desc,
+            amount: amountVal,
             date: new Date().toISOString().split('T')[0],
             type: document.getElementById("type").value,
-            categoryId: parseInt(document.getElementById("categoryId").value)
+            categoryId: catId,
+            category: { id: catId }
         };
 
         try {
@@ -180,7 +200,9 @@
                 document.getElementById("amount").value = "";
                 loadTransactions();
             } else {
-                alert("Erro ao salvar transação!");
+                const errorData = await response.json();
+                console.error("Detalhe do erro:", errorData);
+                alert("Erro ao salvar transação! Verifique os dados introduzidos.");
             }
         } catch (err) {
             console.error("Erro ao criar transação:", err);
