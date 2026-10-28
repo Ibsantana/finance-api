@@ -146,9 +146,5 @@ Com a aplicação rodando, acesse a documentação interativa dos endpoints pelo
 
 Desenvolvido por **Isabella Santana**.
 
-## 👩‍💻 Autora
-
-Desenvolvido por **Isabella Santana**.
-
 - GitHub: [@Ibsantana](https://github.com/Ibsantana)
 - Repositório: [finance-api](https://github.com/Ibsantana/finance-api)
