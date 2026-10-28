@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance API - Painel de Controlo</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f7f6; padding: 20px; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h2 { margin-bottom: 15px; color: #2c3e50; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        button { background-color: #27ae60; color: white; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; }
+        button:hover { background-color: #219150; }
+        .hidden { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .badge-despesa { color: #e74c3c; font-weight: bold; }
+        .badge-receita { color: #27ae60; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- LOGIN -->
+    <div id="loginSection" class="card">
+        <h2>Entrar no Sistema</h2>
+        <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" id="loginEmail" placeholder="exemplo@email.com">
+        </div>
+        <div class="form-group">
+            <label>Palavra-passe</label>
+            <input type="password" id="loginPassword" placeholder="******">
+        </div>
+        <button onclick="login()">Entrar</button>
+        <p id="loginMessage" style="margin-top: 10px; color: red;"></p>
+    </div>
+
+    <!-- PAINEL PRINCIPAL -->
+    <div id="dashboardSection" class="hidden">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Gestão Financeira</h2>
+            <button onclick="logout()" style="width: auto; background-color: #e74c3c; padding: 8px 15px;">Sair</button>
+        </div>
+
+        <div class="card">
+            <h2>Nova Transação</h2>
+            <div class="form-group">
+                <label>Descrição</label>
+                <input type="text" id="desc" placeholder="Ex: Mercado, Salário">
+            </div>
+            <div class="form-group">
+                <label>Valor (R$)</label>
+                <input type="number" id="amount" step="0.01" placeholder="100.00">
+            </div>
+            <div class="form-group">
+                <label>Tipo</label>
+                <select id="type">
+                    <option value="DESPESA">Despesa</option>
+                    <option value="RECEITA">Receita</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ID da Categoria</label>
+                <input type="number" id="categoryId" value="1">
+            </div>
+            <button onclick="createTransaction()">Adicionar Transação</button>
+        </div>
+
+        <div class="card">
+            <h2>Histórico de Transações</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Tipo</th>
+                    <th>Categoria</th>
+                </tr>
+                </thead>
+                <tbody id="transactionTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "http://localhost:8080/api";
+    let token = localStorage.getItem("jwt_token");
+
+    if (token) showDashboard();
+
+    async function login() {
+        const email = document.getElementById("loginEmail").value;
+        const password = document.getElementById("loginPassword").value;
+
+        try {
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (!response.ok) throw new Error("Credenciais inválidas");
+
+            const data = await response.json();
+            token = data.token;
+            localStorage.setItem("jwt_token", token);
+            showDashboard();
+        } catch (err) {
+            document.getElementById("loginMessage").innerText = err.message;
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem("jwt_token");
+        location.reload();
+    }
+
+    function showDashboard() {
+        document.getElementById("loginSection").classList.add("hidden");
+        document.getElementById("dashboardSection").classList.remove("hidden");
+        loadTransactions();
+    }
+
+    async function loadTransactions() {
+        try {
+            const response = await fetch(`${API_URL}/transactions`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            const transactions = await response.json();
+
+            const tbody = document.getElementById("transactionTable");
+            tbody.innerHTML = "";
+
+            transactions.forEach(t => {
+                const badge = t.type === 'DESPESA' ? 'badge-despesa' : 'badge-receita';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${t.id}</td>
+                        <td>${t.description}</td>
+                        <td>R$ ${t.amount.toFixed(2)}</td>
+                        <td class="${badge}">${t.type}</td>
+                        <td>${t.categoryName || '-'}</td>
+                    </tr>
+                `;
+            });
+        } catch (err) {
+            console.error("Erro ao carregar transações:", err);
+        }
+    }
+
+    async function createTransaction() {
+        const payload = {
+            description: document.getElementById("desc").value,
+            amount: parseFloat(document.getElementById("amount").value),
+            date: new Date().toISOString().split('T')[0],
+            type: document.getElementById("type").value,
+            categoryId: parseInt(document.getElementById("categoryId").value)
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/transactions`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                document.getElementById("desc").value = "";
+                document.getElementById("amount").value = "";
+                loadTransactions();
+            } else {
+                alert("Erro ao salvar transação!");
+            }
+        } catch (err) {
+            console.error("Erro ao criar transação:", err);
+        }
+    }
+</script>
+</body>
+</html>
